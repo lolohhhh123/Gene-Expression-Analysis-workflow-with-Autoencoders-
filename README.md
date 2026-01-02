@@ -3,7 +3,7 @@
 A comprehensive workflow for gene expression data analysis using various autoencoder architectures for dimensionality reduction and feature extraction.
 
 ## Features
-
+- Preprocess data to divide test/train dataset
 - Multiple autoencoder architectures:
   - Basic Autoencoder
   - Variational Autoencoder (VAE)
@@ -12,8 +12,8 @@ A comprehensive workflow for gene expression data analysis using various autoenc
 - Memory-efficient training with GPU support
 - Automatic hyperparameter tuning
 - Random Forest feature importance analysis
-- Comprehensive logging and error handling
 - Z-score Analysis
+- Comprehensive logging and error handling
 
 ## Installation
 
