@@ -1,6 +1,6 @@
 # Gene Expression Analysis with Autoencoders
 
-A comprehensive framework for gene expression data analysis using various autoencoder architectures for dimensionality reduction and feature extraction.
+A comprehensive workflow for gene expression data analysis using various autoencoder architectures for dimensionality reduction and feature extraction.
 
 ## Features
 
