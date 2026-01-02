@@ -1,0 +1,81 @@
+# Original Data Preprocessing Configuration (No Synthetic Data)
+
+data:
+  input_format: "csv"
+  expected_columns:
+    gene_column: "first"  # First column contains gene names
+  
+  quality_checks:
+    check_duplicates: true
+    handle_nulls: true
+    null_fill_value: 0
+    min_rows: 10  # Minimum number of genes
+    min_cols: 3   # Minimum number of samples
+
+sample_identification:
+  control_patterns:
+    - "Control"
+    - "control"
+    - "CTRL"
+    - "ctrl"
+    - "Normal"
+    - "normal"
+    - "Healthy"
+    - "healthy"
+  
+  ad_patterns:
+    - "AD"
+    - "ad"
+    - "Alzheimer"
+    - "alzheimer"
+    - "Disease"
+    - "disease"
+    - "Patient"
+    - "patient"
+  
+  case_sensitive: false
+
+splitting:
+  method: "stratified"  # Options: stratified, random, simple
+  test_ratio: 0.3
+  random_state: 42
+  preserve_distribution: true  # Preserve sample type distribution
+  
+  # For simple random split (if method = "simple")
+  shuffle: true
+
+output:
+  format: "xlsx"  # Options: xlsx, csv, parquet
+  save_metadata: true
+  create_summary: true
+  
+  directories:
+    train: "train"
+    test: "test"
+    logs: "logs"
+    metadata: "metadata"
+  
+  file_naming:
+    train_suffix: "_train"
+    test_suffix: "_test"
+    format_extension: ".xlsx"
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_max_size: "10MB"  # Maximum log file size
+  backup_count: 5        # Number of backup log files
+
+validation:
+  enabled: true
+  checks:
+    column_overlap: true  # Ensure no columns in both train and test
+    row_consistency: true  # Ensure same rows in train and test
+    file_integrity: true  # Check files can be loaded
+    shape_validation: true  # Validate output shapes
+  save_report: true
+
+batch_processing:
+  parallel_processing: false  # Enable parallel processing for large datasets
+  max_workers: 4  # Number of parallel workers (if parallel_processing = true)
+  batch_size: 10  # Process files in batches for memory management
