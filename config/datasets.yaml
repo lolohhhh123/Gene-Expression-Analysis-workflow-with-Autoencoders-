@@ -1,0 +1,32 @@
+# Dataset configuration for batch processing
+
+output_base: "./processed_data"
+
+datasets:
+  alzheimer_study_1:
+    original: "./data/raw/alzheimer_study_1/original"
+    synthetic: "./data/raw/alzheimer_study_1/synthetic"
+  
+  alzheimer_study_2:
+    original: "./data/raw/alzheimer_study_2/original"
+    synthetic: "./data/raw/alzheimer_study_2/synthetic"
+  
+  validation_set:
+    original: "./data/raw/validation/original"
+    synthetic: "./data/raw/validation/synthetic"
+
+# Optional: Dataset-specific configurations
+dataset_specific:
+  alzheimer_study_1:
+    test_ratio: 0.4
+    random_state: 123
+  
+  alzheimer_study_2:
+    test_ratio: 0.3
+    random_state: 456
+
+# File naming patterns (can override main config)
+patterns:
+  original: "*.csv"
+  synthetic_ad: "*_synthetic_AD.xlsx"
+  synthetic_control: "*_synthetic_Control.xlsx"
