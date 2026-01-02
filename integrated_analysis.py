@@ -9,7 +9,7 @@ from utils.zscore_calculator import ZScoreCalculator
 
 def run_integrated_analysis(autoencoder_dir: Path, output_dir: Path = None):
     """
-    Run complete analysis pipeline: Autoencoder → Z-score → Integration.
+    Run Z-score analysis: Autoencoder output as input → Z-score → Summary report.
     
     Args:
         autoencoder_dir: Directory with autoencoder results
