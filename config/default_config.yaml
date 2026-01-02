@@ -1,0 +1,12 @@
+training:
+  batch_size: 32
+  epochs: 50
+  learning_rate: 0.001
+  
+models:
+  embedding_dims: [50, 100, 150, 200]
+  model_types: ['autoencoder', 'vae', 'denoising', 'sparse']
+  
+data:
+  normalization: 'max'  # max, minmax, or zscore
+  test_split: 0.2
