@@ -1,0 +1,72 @@
+# Data Preprocessing Configuration
+
+data:
+  original_format: "csv"
+  synthetic_format: "xlsx"
+  
+  patterns:
+    original_suffix: ""  # e.g., ".csv" (empty for all CSV files)
+    synthetic_ad_suffix: "_synthetic_AD.xlsx"
+    synthetic_control_suffix: "_synthetic_Control.xlsx"
+    output_train_suffix: "_train.xlsx"
+    output_test_suffix: "_test.xlsx"
+  
+  column_identification:
+    control_patterns:
+      - "Control"
+      - "control"
+      - "CTRL"
+      - "ctrl"
+      - "Normal"
+      - "normal"
+    ad_patterns:
+      - "AD"
+      - "ad"
+      - "Alzheimer"
+      - "alzheimer"
+      - "Disease"
+      - "disease"
+
+preprocessing:
+  deduplication:
+    method: "mean"  # Options: mean, sum, first, last
+    enabled: true
+  
+  merging:
+    require_common_indices: true
+    min_common_indices: 10  # Minimum number of common genes required
+  
+  splitting:
+    test_ratio: 0.5
+    random_state: 42
+    stratified: false  # Not applicable for column-wise splitting
+    shuffle_columns: true
+    
+  normalization:
+    enabled: false  # Normalization is done in main training script
+    method: "max"  # Options: max, minmax, zscore
+
+output:
+  format: "xlsx"  # Options: xlsx, csv, parquet, hdf5
+  save_column_info: true
+  save_metadata: true
+  compression: false
+  
+  directories:
+    train: "train"
+    test: "test"
+    logs: "logs"
+    column_info: "column_info"
+    metadata: "metadata"
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(levelname)s - %(message)s"
+  file_enabled: true
+  console_enabled: true
+
+validation:
+  enabled: true
+  check_column_overlap: true
+  check_index_consistency: true
+  save_validation_report: true
