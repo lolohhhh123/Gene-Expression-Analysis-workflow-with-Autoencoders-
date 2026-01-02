@@ -1,0 +1,40 @@
+# Z-score Analysis Configuration
+
+data:
+  input_format: "csv"
+  required_columns: ["gene_names", "feature_importance"]
+  
+  preprocessing:
+    min_feature_importance: 0.0  # Minimum value to include
+    drop_na: true
+    normalize_log: true
+    
+analysis:
+  zscore_method: "gene_mean"  # Options: individual, gene_mean, both
+  significance_thresholds:
+    p_0_05: 1.96
+    p_0_01: 2.58
+    p_0_001: 3.29
+  
+  normality_test:
+    method: "shapiro"  # Options: shapiro, anderson, kolmogorov-smirnov
+    alpha: 0.05
+    
+output:
+  save_raw_data: true
+  save_summary: true
+  create_plots: true
+  plot_formats: ["png", "pdf"]
+  decimal_places: 4
+  
+plots:
+  style: "seaborn-whitegrid"
+  figure_size:
+    distribution: [15, 12]
+    ranking: [12, 8]
+    heatmap: [15, 10]
+  
+  colors:
+    positive_zscore: ["lightcoral", "red", "darkred"]
+    negative_zscore: ["lightblue", "blue", "darkblue"]
+    neutral: "lightgray"
