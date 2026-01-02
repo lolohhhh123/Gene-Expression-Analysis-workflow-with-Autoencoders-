@@ -1,0 +1,50 @@
+# Original datasets configuration (without synthetic data)
+
+# Base output directory
+output_base: "./processed_original_data"
+
+# Dataset configurations
+datasets:
+  # Study 1: Alzheimer's disease gene expression
+  alzheimer_study_1:
+    input: "./data/original/study_1"
+    test_ratio: 0.3
+    random_state: 42
+  
+  # Study 2: Parkinson's disease gene expression  
+  parkinson_study:
+    input: "./data/original/parkinson"
+    test_ratio: 0.25
+    random_state: 123
+  
+  # Study 3: Control samples only
+  control_study:
+    input: "./data/original/control"
+    test_ratio: 0.2
+    random_state: 456
+  
+  # Custom study with specific settings
+  custom_study:
+    input: "./data/original/custom"
+    test_ratio: 0.4
+    random_state: 789
+    sample_type_identification:
+      control_patterns: ["CTRL", "Normal"]
+      ad_patterns: ["Case", "Disease"]
+
+# Global overrides (applied to all datasets unless overridden)
+global:
+  log_level: "INFO"
+  validate_outputs: true
+  save_metadata: true
+  
+# File patterns (for batch processing)
+patterns:
+  input: "*.csv"  # Pattern for input files
+  exclude: ["*test*", "*validation*"]  # Patterns to exclude
+
+# Batch processing settings
+batch_settings:
+  parallel_processing: false
+  max_workers: 4
+  memory_limit: "4GB"  # Memory limit per process
