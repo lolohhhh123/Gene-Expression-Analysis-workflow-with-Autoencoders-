@@ -303,14 +303,34 @@ def process_dataset(file_path, train_dir, output_dir, models_list, embedding_dim
         val_data = gene_val_data.values
         gene_index_dict = {gene_id: idx for idx, gene_id in enumerate(gene_ids)}
 
-        # Normalize by max per gene
-        expression_train = train_data / (train_data.max(axis=1)[:, None] + 1e-7)
-        expression_val = val_data / (val_data.max(axis=1)[:, None] + 1e-7)
-        X_train = expression_train.transpose()
-        X_val = expression_val.transpose()
+        def extract_labels_from_df(df):
+            labels = []
+            for col in df.columns:
+                col_lower = str(col).lower()
+                if any(kw in col_lower for kw in ['control', 'ctrl', 'normal']):
+                    labels.append(0)
+                elif any(kw in col_lower for kw in ['ad', 'alzheimer', 'disease']):
+                    labels.append(1)
+                else:
+                    labels.append(-1)
+            df_clean = df.loc[:, [l != -1 for l in labels]]
+            labels_clean = [l for l in labels if l != -1]
+            return df_clean, np.array(labels_clean)
+
+        gene_train_data_T = gene_train_data.T   # (samples, genes)
+        train_df_clean, y_train = extract_labels_from_df(gene_train_data_T)
+
+        gene_val_data_T = gene_val_data.T
+        val_df_clean, y_val = extract_labels_from_df(gene_val_data_T)
+
+        expression_train = train_df_clean.values / (train_df_clean.values.max(axis=1, keepdims=True) + 1e-7)
+        expression_val = val_df_clean.values / (val_df_clean.values.max(axis=1, keepdims=True) + 1e-7)
+
+        X_train = expression_train
+        X_val = expression_val
         num_samples, num_genes = X_train.shape
 
-        print(f"Data shape: {X_train.shape}")
+        print(f"Data shape: {X_train.shape}, y_train shape: {y_train.shape}")
         estimated_memory = estimate_memory_usage(num_genes, num_samples)
         available_memory = get_available_gpu_memory()
         print(f"Estimated memory: {estimated_memory:.2f}MB, Available: {available_memory:.2f}MB")
@@ -331,42 +351,68 @@ def process_dataset(file_path, train_dir, output_dir, models_list, embedding_dim
             print(f"Training {model_type.upper()} model for {sample_name}")
             print(f"{'='*30}")
             try:
-                encoded_data, loss, encoder_model, trained_model = train_and_evaluate_model(
+                encoded_data, loss, encoder_model, full_model = train_and_evaluate_model(
                     model_type, X_train, X_val, embedding_dim, epochs, num_genes)
                 if encoded_data is None:
                     continue
+                    
+                if model_type == 'vae':
+                    decoder_layers = [layer for layer in full_model.layers if isinstance(layer, tf.keras.layers.Dense)]
+                    first_decoder_layer = None
+                    for layer in decoder_layers:
+                        if layer.input_shape[-1] == embedding_dim + 1:
+                            first_decoder_layer = layer
+                            break
+                    if first_decoder_layer is None:
+                        raise ValueError("Could not find decoder first linear layer")
+                    W_first = first_decoder_layer.get_weights()[0]   # (hidden, latent_dim+1)
+                    W_z = W_first[:, :embedding_dim]                 # (hidden, latent_dim)
 
-                # Extract encoder weights (genes x embedding_dim)
-                weights = encoder_model.get_weights()[0]
-                weights_with_names = {gene: weights[idx, :] for gene, idx in gene_index_dict.items()}
-                weight_df = pd.DataFrame.from_dict(weights_with_names, orient='index')
-                weight_file = os.path.join(output_dir, f'{sample_name}_{model_type}_weights.csv')
-                weight_df.to_csv(weight_file)
+                    encoder = Model(full_model.input, full_model.get_layer('z_mean').output)
+                    Z_train = encoder.predict(X_train, batch_size=32)
 
-                # Random Forest importance: target is embedding dimension index
-                df_t = weight_df.T  # embedding_dim x genes
-                le = LabelEncoder()
-                y = le.fit_transform(df_t.index.tolist())
-                rf = RandomForestRegressor(n_estimators=50, random_state=42, n_jobs=-1)
-                rf.fit(df_t.values, y)
-                importance = rf.feature_importances_
-                importance_series = pd.Series(importance, index=weight_df.index)
+                    from sklearn.ensemble import RandomForestClassifier
+                    rf_clf = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
+                    rf_clf.fit(Z_train, y_train)
+                    latent_imp = rf_clf.feature_importances_          # (latent_dim,)
 
-                # Save raw importance
+                    decoder_linear_layers = []
+                    for layer in full_model.layers:
+                        if isinstance(layer, tf.keras.layers.Dense) and layer.name != 'z_mean' and layer.name != 'z_log_var':
+                            decoder_linear_layers.append(layer)
+                            
+                    subsequent_layers = decoder_linear_layers[decoder_linear_layers.index(first_decoder_layer)+1:]
+                    for layer in subsequent_layers:
+                        W_layer = layer.get_weights()[0]  # (next_dim, current_dim)
+                        W = W_layer @ W                    # (next_dim, latent_dim)
+                    # 最终 W 形状 (num_genes, latent_dim)
+                    gene_scores = np.abs(W @ latent_imp)    # (num_genes,)
+                    
+                else:
+                    weights = encoder_model.get_weights()[0]   # (num_genes, embedding_dim)
+                    weights_with_names = {gene: weights[idx, :] for gene, idx in gene_index_dict.items()}
+                    weight_df = pd.DataFrame.from_dict(weights_with_names, orient='index')
+                    df_t = weight_df.T   # (embedding_dim, num_genes)
+                    le = LabelEncoder()
+                    y = le.fit_transform(df_t.index.tolist())
+                    rf = RandomForestRegressor(n_estimators=50, random_state=42, n_jobs=-1)
+                    rf.fit(df_t.values, y)
+                    importance = rf.feature_importances_
+                    gene_scores = importance
+
+                importance_series = pd.Series(gene_scores, index=gene_ids)  # 注意索引应与基因名顺序一致
                 imp_raw_path = os.path.join(output_dir, f'{sample_name}_{model_type}_importance_raw.csv')
                 importance_series.to_csv(imp_raw_path, header=['importance'])
 
-                # Log-normal distribution check
+                importance_arr = gene_scores
                 is_norm, p_value, stat = check_lognormal_distribution(
-                    importance, sample_name, model_type, output_dir)
+                    importance_arr, sample_name, model_type, output_dir)
                 print(f"Log-normal test p-value: {p_value:.4f} (is_normal={is_norm})")
 
-                # Cross-dataset ranking
                 ranking_df = compute_cross_dataset_ranking(
                     importance_series, sample_name, model_type, output_dir)
                 print(f"Top 5 genes by Z-score: {ranking_df.head(5)['gene'].tolist()}")
 
-                # Save loss
                 loss_df = pd.DataFrame({'Loss': [loss], 'Model_Type': [model_type]})
                 loss_df.to_csv(os.path.join(output_dir, f'{sample_name}_{model_type}_loss.csv'), index=False)
 
@@ -378,7 +424,7 @@ def process_dataset(file_path, train_dir, output_dir, models_list, embedding_dim
                 traceback.print_exc()
             finally:
                 if 'encoder_model' in locals(): del encoder_model
-                if 'trained_model' in locals(): del trained_model
+                if 'full_model' in locals(): del full_model
                 tf.keras.backend.clear_session()
                 gc.collect()
 
@@ -387,7 +433,41 @@ def process_dataset(file_path, train_dir, output_dir, models_list, embedding_dim
         print(f"ERROR processing {sample_name}: {e}")
         import traceback
         traceback.print_exc()
+# -------------------- Feature Extraction --------------------
+def decoder_weight_attribution(vae_model, X_train, y_train, gene_names, device='cpu'):
+    """
+    Use decoder first-layer weights + Random Forest classifier on latent features.
+    """
+    decoder_layers = [layer for layer in vae_model.layers if 'dense' in layer.name.lower()]
+    for layer in decoder_layers:
+        if layer.input_shape[-1] == embedding_dim + 1:  # z + condition dim
+            first_decoder_layer = layer
+            break
+    else:
+        raise ValueError("Could not locate decoder first linear layer")
+        
+    weights = first_decoder_layer.get_weights()[0]          # (hidden, latent_dim+1)
+    latent_weights = weights[:, :embedding_dim]              # (hidden, latent_dim)
 
+    encoder = Model(vae_model.input, vae_model.get_layer('z_mean').output)
+    Z_train = encoder.predict(X_train, batch_size=32)        # (n_samples, latent_dim)
+
+    from sklearn.ensemble import RandomForestClassifier
+    rf = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
+    rf.fit(Z_train, y_train)
+    latent_importance = rf.feature_importances_              # (latent_dim,)
+    
+    gene_scores = np.abs(latent_weights.T @ latent_importance)   # (latent_dim, hidden) @ (latent_dim,) -> (hidden,)
+    dense_layers = [layer for layer in vae_model.layers if isinstance(layer, tf.keras.layers.Dense)]
+    W = latent_weights
+    for layer in dense_layers[1:]:
+        W = layer.get_weights()[0] @ W   # (next_dim, current_dim) @ (current_dim, latent_dim)
+    # 最终W形状为 (num_genes, latent_dim)
+    gene_scores = np.abs(W @ latent_importance)   # (num_genes,)
+    
+    gene_scores = (gene_scores - gene_scores.min()) / (gene_scores.max() - gene_scores.min() + 1e-8)
+    importance_series = pd.Series(gene_scores, index=gene_names)
+    return importance_series
 # -------------------- Main Entry Point --------------------
 def main(args):
     os.makedirs(args.output_dir, exist_ok=True)
