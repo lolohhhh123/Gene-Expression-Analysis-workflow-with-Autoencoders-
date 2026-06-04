@@ -47,8 +47,8 @@ Place your data following the structure:
 └── Autoencoder.py
 
 # Run with defaults
-python Autoencoder.py
-python DAE-Lin.py --input_dir ./original
+python Autoencoder.py #Run with 4 Autoencoders
+python DAE-Lin.py --input_dir ./original #Run with DAE-Lin
 
 # Or Run with customize:
 python Autoencoder.py --models autoencoder vae --embedding_dims 100 200 --epochs 30
