@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-FiLM-DAE-Lin: Condition-Driven Discriminative Autoencoder with Linear Decoder
+DAE-Lin: Condition-Driven Discriminative Autoencoder with Linear Decoder
 and Feature-wise Linear Modulation (FiLM) on the encoder.
 
 Input: CSV/XLSX file with genes as rows, samples as columns.
@@ -151,9 +151,9 @@ class FiLMGenerator(nn.Module):
 
 
 # ------------------------------
-# 3. FiLM-DAE-Lin Model
+# 3. DAE-Lin Model
 # ------------------------------
-class FiLM_DAE_Lin(nn.Module):
+class DAE_Lin(nn.Module):
     def __init__(self, input_dim, latent_dim=32, hidden_dims=[128, 64],
                  cond_dim=2, film_hidden=32, dropout=0.2):
         super().__init__()
@@ -331,7 +331,7 @@ def process_dataset(file_path, output_dir, latent_dim=32, hidden_dims=[128,64],
     val_loader = DataLoader(val_ds, batch_size=32, shuffle=False)
 
     input_dim = data.shape[1]
-    model = FiLM_DAE_Lin(input_dim, latent_dim=latent_dim, hidden_dims=hidden_dims).to(device)
+    model = DAE_Lin(input_dim, latent_dim=latent_dim, hidden_dims=hidden_dims).to(device)
 
     model, history = train_model(model, train_loader, val_loader, device,
                                  epochs=epochs, lr=lr, alpha=alpha, beta=beta,
@@ -343,7 +343,7 @@ def process_dataset(file_path, output_dir, latent_dim=32, hidden_dims=[128,64],
     base_name = os.path.splitext(os.path.basename(file_path))[0]
     imp_df = pd.DataFrame({'gene': gene_names, 'importance': gene_imp})
     imp_df = imp_df.sort_values('importance', ascending=False).reset_index(drop=True)
-    out_path = os.path.join(output_dir, f"{base_name}_FiLM_DAE_Lin_importance.csv")
+    out_path = os.path.join(output_dir, f"{base_name}_DAE_Lin_importance.csv")
     imp_df.to_csv(out_path, index=False)
     print(f"Saved importance scores to {out_path}")
 
@@ -394,9 +394,9 @@ def batch_process_and_rank(input_dir, output_dir, **kwargs):
 # 9. Main
 # ------------------------------
 def main():
-    parser = argparse.ArgumentParser(description="FiLM-DAE-Lin model for gene importance learning")
+    parser = argparse.ArgumentParser(description="DAE-Lin model for gene importance learning")
     parser.add_argument("--input_dir", type=str, required=True, help="Directory containing CSV/XLSX files")
-    parser.add_argument("--output_dir", type=str, default="./FiLM_DAE_Lin_results", help="Output directory")
+    parser.add_argument("--output_dir", type=str, default="./DAE_Lin_results", help="Output directory")
     parser.add_argument("--latent_dim", type=int, default=32, help="Latent dimension (k)")
     parser.add_argument("--hidden_dims", type=int, nargs='+', default=[128,64], help="Encoder hidden layers")
     parser.add_argument("--epochs", type=int, default=200, help="Max training epochs")
