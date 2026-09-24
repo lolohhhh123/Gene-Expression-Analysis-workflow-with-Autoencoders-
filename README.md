@@ -14,6 +14,7 @@ A comprehensive workflow for gene expression data analysis using DAE-Lin or othe
 - Automatic hyperparameter tuning
 - Random Forest feature importance analysis
 - Z-score Analysis
+- Co-directional(and Conditional) Latent Shift Analysis (CLSA)
 - Comprehensive logging and error handling
 
 ## Installation
@@ -44,12 +45,14 @@ Place your data following the structure:
 │ ├── sample1.csv
 │ └── ...
 ├── DAE-Lin.py
-└── Autoencoder.py
+├── Autoencoder.py
+└── unified_CLSA_pipeline.py
 
 # Run with defaults
 python Autoencoder.py #Run with 4 Autoencoders
 python DAE-Lin.py --input_dir ./original #Run with DAE-Lin
-
+python unified_CLSA_pipeline.py --input_dir ./original --output_dir ./unified_results --device cuda
 # Or Run with customize:
 python Autoencoder.py --models autoencoder vae --embedding_dims 100 200 --epochs 30
 python DAE-Lin.py --input_dir ./original --output_dir ./DAE_Lin_results --latent_dim 32 --hidden_dims 128,64 --epochs 200 --lr 1e-3 --alpha 1.0 --beta 1e-4 --patience 15 --device cpu
+python unified_CLSA_pipeline.py --input_dir ./original --min_samples 30 --latent_dim 8
